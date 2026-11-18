@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#b5432a">
+<meta name="robots" content="noindex">
+<title>行きたい店リスト</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#f7f1e8; --card:#fffdf9; --ink:#2b2420; --sub:#7a6d63; --line:#e6dccf;
+  --accent:#b5432a; --accent-ink:#fff; --chip:#efe6da; --good:#2f7d4f; --warn:#a8601b;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic UI",system-ui,sans-serif;font-size:16px;line-height:1.55}
+a{color:#1f5fae}
+header{background:var(--bg);
+  border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top)) 14px 10px}
+.wrap{max-width:640px;margin:0 auto}
+.top{display:flex;align-items:center;gap:10px;justify-content:space-between}
+h1{font-size:18px;margin:0}
+.count{color:var(--sub);font-size:13px}
+.btn{border:0;border-radius:999px;padding:9px 16px;font-size:15px;font-weight:600;cursor:pointer}
+.btn-accent{background:var(--accent);color:var(--accent-ink)}
+.btn-ghost{background:var(--chip);color:var(--ink)}
+input[type=search],select,.f input,.f textarea{width:100%;border:1px solid var(--line);border-radius:12px;
+  padding:10px 12px;font-size:16px;background:#fff;color:var(--ink)}
+.search{margin-top:10px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:14px;cursor:pointer}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.sep{width:1px;background:var(--line);margin:0 2px}
+.row{display:flex;gap:8px;align-items:center;margin-top:8px}
+.row label{font-size:13px;color:var(--sub);white-space:nowrap}
+main{padding:12px 12px 90px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin:0 auto 14px;max-width:640px;
+  box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.card.hl{outline:3px solid var(--accent)}
+.photo{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:var(--chip)}
+.body{padding:12px 14px 14px}
+.name{font-size:19px;font-weight:700;margin:0 0 2px}
+.meta{color:var(--sub);font-size:14px}
+.meta a{margin-left:8px}
+.addr{font-size:13px;color:var(--sub);margin-top:2px}
+.kv{font-size:14px;margin-top:8px}
+.kv b{font-weight:600;margin-right:6px}
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.badge{font-size:12px;padding:2px 8px;border-radius:6px;background:var(--chip)}
+.badge.car{background:#fde9cf;color:var(--warn)}
+.badge.res{background:#fbe0da;color:var(--accent)}
+.badge.done{background:#dcefe2;color:var(--good)}
+.comment{margin-top:10px;background:#fff6e6;border-left:4px solid #e9b44c;padding:8px 10px;border-radius:6px;font-size:14px;white-space:pre-wrap}
+.links{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.links a{font-size:13px;text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:5px 10px;color:var(--ink);background:#fff}
+.actions{display:flex;gap:8px;margin-top:12px}
+.actions .btn{flex:1;padding:10px}
+.visited-btn.on{background:var(--good);color:#fff}
+.empty{text-align:center;color:var(--sub);padding:40px 0}
+footer{max-width:640px;margin:0 auto;padding:0 14px 40px;color:var(--sub);font-size:13px}
+footer .btn{margin:4px 6px 4px 0}
+.fab{position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom));z-index:6;border-radius:999px;
+  width:56px;height:56px;font-size:28px;line-height:56px;padding:0;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+dialog{border:0;border-radius:16px;padding:0;width:min(560px,94vw);max-height:90vh}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+.dlg{padding:16px}
+.dlg h2{margin:0 0 10px;font-size:18px}
+.f{margin-bottom:10px}
+.f span{display:block;font-size:13px;color:var(--sub);margin-bottom:3px}
+.checks{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:15px}
+.dlg-actions{display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0;background:#fff;padding-top:8px}
+.del{margin-right:auto;background:#fbe0da;color:var(--accent)}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 14px;border-radius:999px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:9}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="top">
+    <div><h1>行きたい店リスト</h1><div class="count" id="count">読み込み中…</div></div>
+    <button class="btn btn-accent" id="pick">おまかせで1軒</button>
+  </div>
+  <input type="search" class="search" id="q" placeholder="店名・エリア・キーワードで検索">
+  <div class="chips" id="visitChips">
+    <button class="chip on" data-v="all">すべて</button>
+    <button class="chip" data-v="no">未訪問</button>
+    <button class="chip" data-v="yes">来店済み</button>
+    <span class="sep"></span>
+    <button class="chip on" data-m="all">移動すべて</button>
+    <button class="chip" data-m="byWalk">徒歩</button>
+    <button class="chip" data-m="byCar">車</button>
+    <button class="chip" data-m="byTrain">電車</button>
+  </div>
+  <div class="row"><label for="genre">ジャンル</label><select id="genre"><option value="">すべて</option></select></div>
+</div></header>
+
+<main id="list"></main>
+
+<footer>
+  <p>このスマホで変えた内容（行った！・追加・編集）は、このスマホの中に保存されます。<br>
+  ほかの端末にも反映したいときは「変更を書き出す」でコピーして、Claude に渡してください。</p>
+  <button class="btn btn-ghost" id="export">変更を書き出す</button>
+  <button class="btn btn-ghost" id="reset">このスマホの変更を消す</button>
+  <p id="stamp"></p>
+</footer>
+
+<button class="btn btn-accent fab" id="add" aria-label="お店を追加">＋</button>
+
+<dialog id="dlg"><form class="dlg" method="dialog" id="form">
+  <h2 id="dlgTitle">お店を編集</h2>
+  <div class="f"><span>店名</span><input name="name" required></div>
+  <div class="f"><span>ジャンル</span><input name="genre"></div>
+  <div class="f"><span>エリア</span><input name="area"></div>
+  <div class="f"><span>住所</span><input name="address"></div>
+  <div class="f"><span>電話</span><input name="phone" inputmode="tel"></div>
+  <div class="f"><span>営業時間</span><input name="businessHours"></div>
+  <div class="f"><span>定休日</span><input name="closedDays"></div>
+  <div class="f"><span>駐車場</span><input name="parkingInfo"></div>
+  <div class="f"><span>行き方メモ</span><input name="accessNote"></div>
+  <div class="f"><span>予約メモ</span><input name="reservationNote"></div>
+  <div class="f"><span>自分のコメント</span><textarea name="comment" rows="3"></textarea></div>
+  <div class="f"><span>食べログURL</span><input name="tabelogUrl" inputmode="url"></div>
+  <div class="f"><span>公式HP</span><input name="websiteUrl" inputmode="url"></div>
+  <div class="f"><span>Instagram</span><input name="instagramUrl" inputmode="url"></div>
+  <div class="f"><span>写真URL</span><input name="photoUrl" inputmode="url"></div>
+  <div class="checks">
+    <label><input type="checkbox" name="byWalk"> 徒歩</label>
+    <label><input type="checkbox" name="byCar"> 車</label>
+    <label><input type="checkbox" name="byTrain"> 電車</label>
+    <label><input type="checkbox" name="needsReservation"> 予約いる</label>
+    <label><input type="checkbox" name="visited"> 行った</label>
+  </div>
+  <div class="dlg-actions">
+    <button type="button" class="btn del" id="delBtn">削除</button>
+    <button type="button" class="btn btn-ghost" id="cancelBtn">やめる</button>
+    <button type="submit" class="btn btn-accent">保存</button>
+  </div>
+</form></dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const LS = "ikitai-mise-local-v1";
+let base = [];
+let local = load();
+const st = { v: "all", m: "all", q: "", g: "", hl: null };
+
+function load(){ try { return JSON.parse(localStorage.getItem(LS)) || {edits:{}, added:[], deleted:[]}; } catch(e){ return {edits:{}, added:[], deleted:[]}; } }
+function save(){ localStorage.setItem(LS, JSON.stringify(local)); }
+function shops(){
+  const del = new Set(local.deleted);
+  return base.concat(local.added)
+    .filter(s => !del.has(s.id))
+    .map(s => Object.assign({}, s, local.edits[s.id] || {}));
+}
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function safeUrl(u){ return /^https?:\/\//i.test(u || "") ? u : ""; }
+function mapUrl(q){ return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q); }
+function toast(t){ const el = document.getElementById("toast"); el.textContent = t; el.classList.add("show"); setTimeout(() => el.classList.remove("show"), 1600); }
+
+function filtered(){
+  const q = st.q.trim().toLowerCase();
+  return shops().filter(s => {
+    if (st.v === "no" && s.visited) return false;
+    if (st.v === "yes" && !s.visited) return false;
+    if (st.m !== "all" && !s[st.m]) return false;
+    if (st.g && s.genre !== st.g) return false;
+    if (q) {
+      const hay = [s.name, s.genre, s.area, s.address, s.comment, s.accessNote].join(" ").toLowerCase();
+      if (!q.split(/\s+/).every(w => hay.includes(w))) return false;
+    }
+    return true;
+  });
+}
+
+function card(s){
+  const links = [];
+  if (s.phone) links.push(`<a href="tel:${esc(s.phone.replace(/[^0-9+]/g,""))}">📞 電話</a>`);
+  if (safeUrl(s.tabelogUrl)) links.push(`<a href="${esc(s.tabelogUrl)}" target="_blank" rel="noopener">食べログ</a>`);
+  if (safeUrl(s.websiteUrl)) links.push(`<a href="${esc(s.websiteUrl)}" target="_blank" rel="noopener">公式HP</a>`);
+  if (safeUrl(s.instagramUrl)) links.push(`<a href="${esc(s.instagramUrl)}" target="_blank" rel="noopener">Instagram</a>`);
+  if (safeUrl(s.xUrl)) links.push(`<a href="${esc(s.xUrl)}" target="_blank" rel="noopener">X</a>`);
+  const badges = [];
+  if (s.visited) badges.push(`<span class="badge done">来店済み</span>`);
+  if (s.needsReservation) badges.push(`<span class="badge res">予約いる</span>`);
+  if (s.carSuitability) badges.push(`<span class="badge car">${esc(s.carSuitability)}</span>`);
+  if (s.byWalk) badges.push(`<span class="badge">徒歩</span>`);
+  if (s.byCar) badges.push(`<span class="badge">車</span>`);
+  if (s.byTrain) badges.push(`<span class="badge">電車</span>`);
+  const photo = safeUrl(s.photoUrl) ? `<img class="photo" loading="lazy" referrerpolicy="no-referrer" src="${esc(s.photoUrl)}" alt="" onerror="this.remove()">` : "";
+  return `<article class="card${st.hl === s.id ? " hl" : ""}" id="shop-${s.id}">
+    ${photo}
+    <div class="body">
+      <h3 class="name">${esc(s.name)}</h3>
+      <div class="meta">${esc(s.genre)} ・ ${esc(s.area)}
+        ${s.address ? `<a href="${mapUrl(s.name + " " + s.address)}" target="_blank" rel="noopener">地図</a>` : ""}
+        ${s.parkingMapsQuery ? `<a href="${mapUrl(s.parkingMapsQuery)}" target="_blank" rel="noopener">駐車場マップ</a>` : ""}
+      </div>
+      ${s.address ? `<div class="addr">${esc(s.address)}</div>` : ""}
+      ${s.accessNote ? `<div class="addr">${esc(s.accessNote)}</div>` : ""}
+      ${s.businessHours ? `<div class="kv"><b>営業時間</b>${esc(s.businessHours)}</div>` : ""}
+      ${s.closedDays ? `<div class="kv"><b>定休日</b>${esc(s.closedDays)}</div>` : ""}
+      ${s.parkingInfo ? `<div class="kv"><b>駐車場</b>${esc(s.parkingInfo)}</div>` : ""}
+      ${s.reservationNote ? `<div class="kv"><b>予約</b>${esc(s.reservationNote)}</div>` : ""}
+      <div class="badges">${badges.join("")}</div>
+      ${s.comment ? `<div class="comment">${esc(s.comment)}</div>` : ""}
+      ${links.length ? `<div class="links">${links.join("")}</div>` : ""}
+      <div class="actions">
+        <button class="btn btn-ghost visited-btn${s.visited ? " on" : ""}" data-visit="${s.id}">${s.visited ? "行った ✓" : "行った！"}</button>
+        <button class="btn btn-ghost" data-edit="${s.id}">編集</button>
+      </div>
+    </div>
+  </article>`;
+}
+
+function render(){
+  const all = shops();
+  const list = filtered();
+  document.getElementById("count").textContent =
+    `全${all.length}軒 ・ 未訪問${all.filter(s => !s.visited).length}軒` + (list.length !== all.length ? ` ・ 表示${list.length}軒` : "");
+  document.getElementById("list").innerHTML = list.length ? list.map(card).join("") : `<div class="empty">条件に合うお店がありません</div>`;
+  const sel = document.getElementById("genre");
+  const genres = [...new Set(all.map(s => s.genre).filter(Boolean))].sort((a,b) => a.localeCompare(b, "ja"));
+  const cur = st.g;
+  sel.innerHTML = `<option value="">すべて</option>` + genres.map(g => `<option${g === cur ? " selected" : ""}>${esc(g)}</option>`).join("");
+}
+
+function setEdit(id, patch){
+  const added = local.added.find(s => s.id === id);
+  if (added) Object.assign(added, patch);
+  else local.edits[id] = Object.assign({}, local.edits[id] || {}, patch);
+  save();
+}
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("button");
+  if (!t) return;
+  if (t.dataset.v) { st.v = t.dataset.v; document.querySelectorAll("[data-v]").forEach(b => b.classList.toggle("on", b === t)); render(); }
+  else if (t.dataset.m) { st.m = t.dataset.m; document.querySelectorAll("[data-m]").forEach(b => b.classList.toggle("on", b === t)); render(); }
+  else if (t.dataset.visit) {
+    const id = +t.dataset.visit; const s = shops().find(x => x.id === id);
+    setEdit(id, { visited: !s.visited }); render(); toast(!s.visited ? "行ったにしました" : "未訪問に戻しました");
+  }
+  else if (t.dataset.edit) openDlg(+t.dataset.edit);
+});
+document.getElementById("q").addEventListener("input", e => { st.q = e.target.value; render(); });
+document.getElementById("genre").addEventListener("change", e => { st.g = e.target.value; render(); });
+document.getElementById("pick").addEventListener("click", () => {
+  let pool = filtered().filter(s => !s.visited);
+  if (!pool.length) pool = filtered();
+  if (!pool.length) { toast("候補がありません"); return; }
+  const s = pool[Math.floor(Math.random() * pool.length)];
+  st.hl = s.id; render();
+  document.getElementById("shop-" + s.id).scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+const dlg = document.getElementById("dlg"), form = document.getElementById("form");
+let editing = null;
+const TEXT = ["name","genre","area","address","phone","businessHours","closedDays","parkingInfo","accessNote","reservationNote","comment","tabelogUrl","websiteUrl","instagramUrl","photoUrl"];
+const BOOL = ["byWalk","byCar","byTrain","needsReservation","visited"];
+function openDlg(id){
+  editing = id;
+  const s = id == null ? {} : shops().find(x => x.id === id);
+  document.getElementById("dlgTitle").textContent = id == null ? "お店を追加" : "お店を編集";
+  document.getElementById("delBtn").style.display = id == null ? "none" : "";
+  TEXT.forEach(k => form.elements[k].value = s[k] || "");
+  BOOL.forEach(k => form.elements[k].checked = !!s[k]);
+  dlg.showModal();
+}
+form.addEventListener("submit", () => {
+  const v = {};
+  TEXT.forEach(k => v[k] = form.elements[k].value.trim());
+  BOOL.forEach(k => v[k] = form.elements[k].checked);
+  if (editing == null) {
+    const maxId = Math.max(0, ...base.map(s => s.id), ...local.added.map(s => s.id));
+    local.added.push(Object.assign({ id: maxId + 1, xUrl: "", carSuitability: "" }, v));
+    save(); toast("追加しました");
+  } else { setEdit(editing, v); toast("保存しました"); }
+  render();
+});
+document.getElementById("cancelBtn").addEventListener("click", () => dlg.close());
+document.getElementById("delBtn").addEventListener("click", () => {
+  if (editing == null) return;
+  local.added = local.added.filter(s => s.id !== editing);
+  if (!local.deleted.includes(editing)) local.deleted.push(editing);
+  save(); dlg.close(); render(); toast("削除しました（このスマホの中だけ）");
+});
+document.getElementById("add").addEventListener("click", () => openDlg(null));
+document.getElementById("export").addEventListener("click", async () => {
+  const text = JSON.stringify(shops(), null, 1);
+  try { await navigator.clipboard.writeText(text); toast("全店のデータをコピーしました"); }
+  catch(e) { prompt("下の文字をすべてコピーしてください", text); }
+});
+document.getElementById("reset").addEventListener("click", () => {
+  if (!confirm("このスマホで変えた内容（行った！・追加・編集・削除）を消して、元のリストに戻しますか？")) return;
+  local = {edits:{}, added:[], deleted:[]}; save(); render(); toast("元に戻しました");
+});
+
+fetch("data.json", { cache: "no-cache" }).then(r => r.json()).then(d => {
+  base = d; render();
+  document.getElementById("stamp").textContent = "元データ：" + d.length + "軒";
+}).catch(() => { document.getElementById("count").textContent = "データを読み込めませんでした（電波を確認してください）"; });
+
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js");
+</script>
+</body>
+</html>
