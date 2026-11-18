@@ -16,7 +16,7 @@
    - `businessHours` / `closedDays` / `needsReservation`（予約必須なら true）/ `reservationNote`
    - `parkingInfo`（例「駐車場あり（10台）」「専用なし」）/ `carSuitability`（「車向き」「車可」「車不向き」のどれか）
    - `byCar` / `byTrain` / `byWalk`（true/false。徒歩はオーナーが言った時だけ true）/ `accessNote`（最寄り駅から徒歩○分など）
-   - `photoUrl` … **必ず探して入れる**（空だとアプリに写真が出ない）。食べログのページの `og:image`（例 `https://tblg.k-img.com/resize/640x640c/restaurant/images/Rvw/390082/7e38….jpg`）を見つけ、`https://tblg.k-img.com/restaurant/images/Rvw/{番号}/640x640_rect_{ファイル名}.jpg` の形に直して入れる。`?` 以降の付いた URL は使わない。どうしても取れない時だけ空にして、そのことをオーナーに伝える
+   - `photoUrl` … **必ず探して入れる**（空だとアプリに写真が出ない）。食べログのページの `og:image`（例 `https://tblg.k-img.com/resize/640x640c/restaurant/images/Rvw/390082/7e38….jpg`）を見つけ、`https://tblg.k-img.com/restaurant/images/Rvw/{番号}/640x640_rect_{ファイル名}.jpg` の形に直して入れる。`?` 以降の付いた URL と `http:` で始まる URL（スマホで表示されない）は使わない。どうしても取れない時だけ空にして、そのことをオーナーに伝える
    - `comment` … オーナーが感想を書いた時だけ。`visited` … 普通は false
    - 専用駐車場がなく近くのパーキングが分かる場合だけ `parkingMapsQuery`（例「タイムズ○○ 住所」）
 2. `id` は今ある最大の id + 1
