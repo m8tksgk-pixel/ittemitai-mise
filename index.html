@@ -74,9 +74,9 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .dlg-actions{display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0;background:#fff;padding-top:8px}
 .del{margin-right:auto;background:#fbe0da;color:var(--accent)}
 .tabs{display:flex;gap:0;margin-top:10px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
-.tab{flex:1;border:0;background:#fff;padding:9px 6px;font-size:15px;font-weight:600;color:var(--sub);cursor:pointer}
+.tab{flex:1;border:0;background:#fff;padding:9px 4px;font-size:14px;font-weight:600;color:var(--sub);cursor:pointer}
 .tab.on{background:var(--accent);color:#fff}
-.tab small{font-weight:400;opacity:.85;margin-left:4px}
+.tab small{display:block;font-weight:400;opacity:.85;font-size:12px}
 .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 14px;border-radius:999px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:9}
 .toast.show{opacity:1}
 </style>
@@ -89,7 +89,8 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
   </div>
   <div class="tabs" id="tabs">
     <button class="tab on" data-tab="want">行きたい店<small id="cWant"></small></button>
-    <button class="tab" data-tab="daily">朝・徒歩圏<small id="cDaily"></small></button>
+    <button class="tab" data-tab="morning">朝・徒歩15分<small id="cMorning"></small></button>
+    <button class="tab" data-tab="walk">徒歩15分<small id="cWalk"></small></button>
   </div>
   <input type="search" class="search" id="q" placeholder="店名・エリア・キーワードで検索">
   <div class="chips" id="visitChips">
@@ -119,7 +120,7 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 
 <dialog id="dlg"><form class="dlg" method="dialog" id="form">
   <h2 id="dlgTitle">お店を編集</h2>
-  <div class="f"><span>リスト</span><select name="list"><option value="want">行きたい店</option><option value="daily">朝・徒歩圏（ふだん使い）</option></select></div>
+  <div class="f"><span>リスト</span><select name="list"><option value="want">行きたい店</option><option value="morning">朝・徒歩15分</option><option value="walk">徒歩15分（時間帯は問わない）</option></select></div>
   <div class="f"><span>店名</span><input name="name" required></div>
   <div class="f"><span>ジャンル</span><input name="genre"></div>
   <div class="f"><span>エリア</span><input name="area"></div>
@@ -155,9 +156,9 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 const LS = "ikitai-mise-local-v1";
 let base = [];
 let local = load();
-const TABS = { want: "行きたい店リスト", daily: "朝・徒歩圏の店" };
+const TABS = { want: "行きたい店リスト", morning: "朝に歩いて行ける店", walk: "歩いて行ける店" };
 const TAB_LS = "ittemitai-mise-tab";
-function listOf(s){ return s.list === "daily" ? "daily" : "want"; }
+function listOf(s){ return TABS[s.list] ? s.list : "want"; }
 let savedTab = "want";
 try { if (TABS[localStorage.getItem(TAB_LS)]) savedTab = localStorage.getItem(TAB_LS); } catch(e){}
 const st = { tab: savedTab, v: "all", m: "all", q: "", g: "", hl: null };
@@ -237,7 +238,8 @@ function render(){
   const list = filtered();
   document.getElementById("title").textContent = TABS[st.tab];
   document.getElementById("cWant").textContent = every.filter(s => listOf(s) === "want").length + "軒";
-  document.getElementById("cDaily").textContent = every.filter(s => listOf(s) === "daily").length + "軒";
+  document.getElementById("cMorning").textContent = every.filter(s => listOf(s) === "morning").length + "軒";
+  document.getElementById("cWalk").textContent = every.filter(s => listOf(s) === "walk").length + "軒";
   document.querySelectorAll("[data-tab]").forEach(b => b.classList.toggle("on", b.dataset.tab === st.tab));
   document.getElementById("count").textContent =
     `全${all.length}軒 ・ 未訪問${all.filter(s => !s.visited).length}軒` + (list.length !== all.length ? ` ・ 表示${list.length}軒` : "");
