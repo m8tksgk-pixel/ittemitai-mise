@@ -88,9 +88,10 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
     <button class="btn btn-accent" id="pick">おまかせで1軒</button>
   </div>
   <div class="tabs" id="tabs">
-    <button class="tab on" data-tab="want">行きたい店<small id="cWant"></small></button>
-    <button class="tab" data-tab="morning">朝・徒歩15分<small id="cMorning"></small></button>
-    <button class="tab" data-tab="walk">徒歩15分<small id="cWalk"></small></button>
+    <button class="tab on" data-tab="all">すべて<small id="c-all"></small></button>
+    <button class="tab" data-tab="want">行きたい店<small id="c-want"></small></button>
+    <button class="tab" data-tab="morning">朝OK<small id="c-morning"></small></button>
+    <button class="tab" data-tab="byWalk">徒歩15分<small id="c-byWalk"></small></button>
   </div>
   <input type="search" class="search" id="q" placeholder="店名・エリア・キーワードで検索">
   <div class="chips" id="visitChips">
@@ -99,7 +100,6 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
     <button class="chip" data-v="yes">来店済み</button>
     <span class="sep"></span>
     <button class="chip on" data-m="all">移動すべて</button>
-    <button class="chip" data-m="byWalk">徒歩</button>
     <button class="chip" data-m="byCar">車</button>
     <button class="chip" data-m="byTrain">電車</button>
   </div>
@@ -120,7 +120,6 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 
 <dialog id="dlg"><form class="dlg" method="dialog" id="form">
   <h2 id="dlgTitle">お店を編集</h2>
-  <div class="f"><span>リスト</span><select name="list"><option value="want">行きたい店</option><option value="morning">朝・徒歩15分</option><option value="walk">徒歩15分（時間帯は問わない）</option></select></div>
   <div class="f"><span>店名</span><input name="name" required></div>
   <div class="f"><span>ジャンル</span><input name="genre"></div>
   <div class="f"><span>エリア</span><input name="area"></div>
@@ -137,7 +136,9 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
   <div class="f"><span>Instagram</span><input name="instagramUrl" inputmode="url"></div>
   <div class="f"><span>写真URL</span><input name="photoUrl" inputmode="url"></div>
   <div class="checks">
-    <label><input type="checkbox" name="byWalk"> 徒歩</label>
+    <label><input type="checkbox" name="want"> 行きたい店</label>
+    <label><input type="checkbox" name="morning"> 朝OK</label>
+    <label><input type="checkbox" name="byWalk"> 徒歩15分</label>
     <label><input type="checkbox" name="byCar"> 車</label>
     <label><input type="checkbox" name="byTrain"> 電車</label>
     <label><input type="checkbox" name="needsReservation"> 予約いる</label>
@@ -156,10 +157,11 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 const LS = "ikitai-mise-local-v1";
 let base = [];
 let local = load();
-const TABS = { want: "行きたい店リスト", morning: "朝に歩いて行ける店", walk: "歩いて行ける店" };
-const TAB_LS = "ittemitai-mise-tab";
-function listOf(s){ return TABS[s.list] ? s.list : "want"; }
-let savedTab = "want";
+// 1つの店が複数の条件に当てはまれば、どのタブにも出る
+const TABS = { all: "お店リスト", want: "行きたい店", morning: "朝に行ける店", byWalk: "徒歩15分で行ける店" };
+const TAB_LS = "ittemitai-mise-tab2";
+function inTab(s, t){ return t === "all" || !!s[t]; }
+let savedTab = "all";
 try { if (TABS[localStorage.getItem(TAB_LS)]) savedTab = localStorage.getItem(TAB_LS); } catch(e){}
 const st = { tab: savedTab, v: "all", m: "all", q: "", g: "", hl: null };
 
@@ -179,7 +181,7 @@ function toast(t){ const el = document.getElementById("toast"); el.textContent =
 function filtered(){
   const q = st.q.trim().toLowerCase();
   return shops().filter(s => {
-    if (listOf(s) !== st.tab) return false;
+    if (!inTab(s, st.tab)) return false;
     if (st.v === "no" && s.visited) return false;
     if (st.v === "yes" && !s.visited) return false;
     if (st.m !== "all" && !s[st.m]) return false;
@@ -203,7 +205,9 @@ function card(s){
   if (s.visited) badges.push(`<span class="badge done">来店済み</span>`);
   if (s.needsReservation) badges.push(`<span class="badge res">予約いる</span>`);
   if (s.carSuitability) badges.push(`<span class="badge car">${esc(s.carSuitability)}</span>`);
-  if (s.byWalk) badges.push(`<span class="badge">徒歩</span>`);
+  if (s.want) badges.push(`<span class="badge">行きたい店</span>`);
+  if (s.morning) badges.push(`<span class="badge">朝OK</span>`);
+  if (s.byWalk) badges.push(`<span class="badge">徒歩15分</span>`);
   if (s.byCar) badges.push(`<span class="badge">車</span>`);
   if (s.byTrain) badges.push(`<span class="badge">電車</span>`);
   const photo = safeUrl(s.photoUrl) ? `<img class="photo" loading="lazy" referrerpolicy="no-referrer" src="${esc(s.photoUrl)}" alt="" onerror="this.remove()">` : "";
@@ -234,12 +238,10 @@ function card(s){
 
 function render(){
   const every = shops();
-  const all = every.filter(s => listOf(s) === st.tab);
+  const all = every.filter(s => inTab(s, st.tab));
   const list = filtered();
   document.getElementById("title").textContent = TABS[st.tab];
-  document.getElementById("cWant").textContent = every.filter(s => listOf(s) === "want").length + "軒";
-  document.getElementById("cMorning").textContent = every.filter(s => listOf(s) === "morning").length + "軒";
-  document.getElementById("cWalk").textContent = every.filter(s => listOf(s) === "walk").length + "軒";
+  Object.keys(TABS).forEach(t => document.getElementById("c-" + t).textContent = every.filter(s => inTab(s, t)).length + "軒");
   document.querySelectorAll("[data-tab]").forEach(b => b.classList.toggle("on", b.dataset.tab === st.tab));
   document.getElementById("count").textContent =
     `全${all.length}軒 ・ 未訪問${all.filter(s => !s.visited).length}軒` + (list.length !== all.length ? ` ・ 表示${list.length}軒` : "");
@@ -283,7 +285,7 @@ document.getElementById("pick").addEventListener("click", () => {
 const dlg = document.getElementById("dlg"), form = document.getElementById("form");
 let editing = null;
 const TEXT = ["name","genre","area","address","phone","businessHours","closedDays","parkingInfo","accessNote","reservationNote","comment","tabelogUrl","websiteUrl","instagramUrl","photoUrl"];
-const BOOL = ["byWalk","byCar","byTrain","needsReservation","visited"];
+const BOOL = ["want","morning","byWalk","byCar","byTrain","needsReservation","visited"];
 function openDlg(id){
   editing = id;
   const s = id == null ? {} : shops().find(x => x.id === id);
@@ -291,14 +293,13 @@ function openDlg(id){
   document.getElementById("delBtn").style.display = id == null ? "none" : "";
   TEXT.forEach(k => form.elements[k].value = s[k] || "");
   BOOL.forEach(k => form.elements[k].checked = !!s[k]);
-  form.elements.list.value = id == null ? st.tab : listOf(s);
+  if (id == null && st.tab !== "all") form.elements[st.tab].checked = true;
   dlg.showModal();
 }
 form.addEventListener("submit", () => {
   const v = {};
   TEXT.forEach(k => v[k] = form.elements[k].value.trim());
   BOOL.forEach(k => v[k] = form.elements[k].checked);
-  v.list = form.elements.list.value;
   if (editing == null) {
     const maxId = Math.max(0, ...base.map(s => s.id), ...local.added.map(s => s.id));
     local.added.push(Object.assign({ id: maxId + 1, xUrl: "", carSuitability: "" }, v));
