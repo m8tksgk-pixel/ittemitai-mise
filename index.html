@@ -150,6 +150,7 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
   <div class="f"><span>駐車場</span><input name="parkingInfo"></div>
   <div class="f"><span>行き方メモ</span><input name="accessNote"></div>
   <div class="f"><span>予約メモ</span><input name="reservationNote"></div>
+  <div class="f"><span>行く前に（混む時間・駐車場など）</span><input name="beforeGo"></div>
   <div class="f"><span>自分のコメント</span><textarea name="comment" rows="3"></textarea></div>
   <div class="f"><span>食べログURL</span><input name="tabelogUrl" inputmode="url"></div>
   <div class="f"><span>公式HP</span><input name="websiteUrl" inputmode="url"></div>
@@ -287,6 +288,7 @@ function card(s){
       ${s.businessHours ? `<div class="kv"><b>営業時間</b>${esc(s.businessHours)}</div>` : ""}
       ${s.closedDays ? `<div class="kv"><b>定休日</b>${esc(s.closedDays)}</div>` : ""}
       ${s.parkingInfo ? `<div class="kv"><b>駐車場</b>${esc(s.parkingInfo)}</div>` : ""}
+      ${s.beforeGo ? `<div class="kv"><b>行く前に</b>${esc(s.beforeGo)}</div>` : ""}
       ${s.reservationNote ? `<div class="kv"><b>予約</b>${esc(s.reservationNote)}</div>` : ""}
       <div class="badges">${badges.join("")}</div>
       ${s.comment ? `<div class="comment">${esc(s.comment)}</div>` : ""}
@@ -350,7 +352,7 @@ document.getElementById("pick").addEventListener("click", () => {
 
 const dlg = document.getElementById("dlg"), form = document.getElementById("form");
 let editing = null;
-const TEXT = ["name","genre","area","address","phone","businessHours","closedDays","parkingInfo","accessNote","reservationNote","comment","tabelogUrl","websiteUrl","instagramUrl","photoUrl"];
+const TEXT = ["beforeGo","name","genre","area","address","phone","businessHours","closedDays","parkingInfo","accessNote","reservationNote","comment","tabelogUrl","websiteUrl","instagramUrl","photoUrl"];
 const BOOL = ["dogOk","want","morning","byWalk","byCar","byTrain","needsReservation","visited","liked"];
 function openDlg(id){
   editing = id;
