@@ -73,6 +73,10 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .checks{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:15px}
 .dlg-actions{display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0;background:#fff;padding-top:8px}
 .del{margin-right:auto;background:#fbe0da;color:var(--accent)}
+.tabs{display:flex;gap:0;margin-top:10px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.tab{flex:1;border:0;background:#fff;padding:9px 6px;font-size:15px;font-weight:600;color:var(--sub);cursor:pointer}
+.tab.on{background:var(--accent);color:#fff}
+.tab small{font-weight:400;opacity:.85;margin-left:4px}
 .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 14px;border-radius:999px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:9}
 .toast.show{opacity:1}
 </style>
@@ -80,8 +84,12 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 <body>
 <header><div class="wrap">
   <div class="top">
-    <div><h1>行きたい店リスト</h1><div class="count" id="count">読み込み中…</div></div>
+    <div><h1 id="title">行きたい店リスト</h1><div class="count" id="count">読み込み中…</div></div>
     <button class="btn btn-accent" id="pick">おまかせで1軒</button>
+  </div>
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-tab="want">行きたい店<small id="cWant"></small></button>
+    <button class="tab" data-tab="daily">朝・徒歩圏<small id="cDaily"></small></button>
   </div>
   <input type="search" class="search" id="q" placeholder="店名・エリア・キーワードで検索">
   <div class="chips" id="visitChips">
@@ -111,6 +119,7 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 
 <dialog id="dlg"><form class="dlg" method="dialog" id="form">
   <h2 id="dlgTitle">お店を編集</h2>
+  <div class="f"><span>リスト</span><select name="list"><option value="want">行きたい店</option><option value="daily">朝・徒歩圏（ふだん使い）</option></select></div>
   <div class="f"><span>店名</span><input name="name" required></div>
   <div class="f"><span>ジャンル</span><input name="genre"></div>
   <div class="f"><span>エリア</span><input name="area"></div>
@@ -146,7 +155,12 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 const LS = "ikitai-mise-local-v1";
 let base = [];
 let local = load();
-const st = { v: "all", m: "all", q: "", g: "", hl: null };
+const TABS = { want: "行きたい店リスト", daily: "朝・徒歩圏の店" };
+const TAB_LS = "ittemitai-mise-tab";
+function listOf(s){ return s.list === "daily" ? "daily" : "want"; }
+let savedTab = "want";
+try { if (TABS[localStorage.getItem(TAB_LS)]) savedTab = localStorage.getItem(TAB_LS); } catch(e){}
+const st = { tab: savedTab, v: "all", m: "all", q: "", g: "", hl: null };
 
 function load(){ try { return JSON.parse(localStorage.getItem(LS)) || {edits:{}, added:[], deleted:[]}; } catch(e){ return {edits:{}, added:[], deleted:[]}; } }
 function save(){ localStorage.setItem(LS, JSON.stringify(local)); }
@@ -164,6 +178,7 @@ function toast(t){ const el = document.getElementById("toast"); el.textContent =
 function filtered(){
   const q = st.q.trim().toLowerCase();
   return shops().filter(s => {
+    if (listOf(s) !== st.tab) return false;
     if (st.v === "no" && s.visited) return false;
     if (st.v === "yes" && !s.visited) return false;
     if (st.m !== "all" && !s[st.m]) return false;
@@ -217,8 +232,13 @@ function card(s){
 }
 
 function render(){
-  const all = shops();
+  const every = shops();
+  const all = every.filter(s => listOf(s) === st.tab);
   const list = filtered();
+  document.getElementById("title").textContent = TABS[st.tab];
+  document.getElementById("cWant").textContent = every.filter(s => listOf(s) === "want").length + "軒";
+  document.getElementById("cDaily").textContent = every.filter(s => listOf(s) === "daily").length + "軒";
+  document.querySelectorAll("[data-tab]").forEach(b => b.classList.toggle("on", b.dataset.tab === st.tab));
   document.getElementById("count").textContent =
     `全${all.length}軒 ・ 未訪問${all.filter(s => !s.visited).length}軒` + (list.length !== all.length ? ` ・ 表示${list.length}軒` : "");
   document.getElementById("list").innerHTML = list.length ? list.map(card).join("") : `<div class="empty">条件に合うお店がありません</div>`;
@@ -238,7 +258,8 @@ function setEdit(id, patch){
 document.addEventListener("click", e => {
   const t = e.target.closest("button");
   if (!t) return;
-  if (t.dataset.v) { st.v = t.dataset.v; document.querySelectorAll("[data-v]").forEach(b => b.classList.toggle("on", b === t)); render(); }
+  if (t.dataset.tab) { st.tab = t.dataset.tab; st.g = ""; st.hl = null; try { localStorage.setItem(TAB_LS, st.tab); } catch(e){} render(); window.scrollTo(0, 0); }
+  else if (t.dataset.v) { st.v = t.dataset.v; document.querySelectorAll("[data-v]").forEach(b => b.classList.toggle("on", b === t)); render(); }
   else if (t.dataset.m) { st.m = t.dataset.m; document.querySelectorAll("[data-m]").forEach(b => b.classList.toggle("on", b === t)); render(); }
   else if (t.dataset.visit) {
     const id = +t.dataset.visit; const s = shops().find(x => x.id === id);
@@ -268,12 +289,14 @@ function openDlg(id){
   document.getElementById("delBtn").style.display = id == null ? "none" : "";
   TEXT.forEach(k => form.elements[k].value = s[k] || "");
   BOOL.forEach(k => form.elements[k].checked = !!s[k]);
+  form.elements.list.value = id == null ? st.tab : listOf(s);
   dlg.showModal();
 }
 form.addEventListener("submit", () => {
   const v = {};
   TEXT.forEach(k => v[k] = form.elements[k].value.trim());
   BOOL.forEach(k => v[k] = form.elements[k].checked);
+  v.list = form.elements.list.value;
   if (editing == null) {
     const maxId = Math.max(0, ...base.map(s => s.id), ...local.added.map(s => s.id));
     local.added.push(Object.assign({ id: maxId + 1, xUrl: "", carSuitability: "" }, v));

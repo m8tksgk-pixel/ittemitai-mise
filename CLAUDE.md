@@ -21,6 +21,7 @@
    - `photoUrl` … **必ず探して入れる**（空だとアプリに写真が出ない）。食べログのページの `og:image`（例 `https://tblg.k-img.com/resize/640x640c/restaurant/images/Rvw/390082/7e38….jpg`）を見つけ、`https://tblg.k-img.com/restaurant/images/Rvw/{番号}/640x640_rect_{ファイル名}.jpg` の形に直して入れる。`?` 以降の付いた URL と `http:` で始まる URL（スマホで表示されない）は使わない。どうしても取れない時だけ空にして、そのことをオーナーに伝える
    - `comment` … オーナーが感想を書いた時だけ。`visited` … 普通は false
    - 専用駐車場がなく近くのパーキングが分かる場合だけ `parkingMapsQuery`（例「タイムズ○○ 住所」）
+   - `list` … どのタブに出すか。「行きたい店」タブは省略（または `"want"`）。朝に行ける店・歩いて行けるふだん使いの店として頼まれたら `"daily"`（アプリの「朝・徒歩圏」タブに出る）
 2. `id` は今ある最大の id + 1
 3. 同じ店（tabelogUrl か店名＋住所が一致）が既にあれば、追加せずにそのことを伝える
 4. data.json の末尾に1行1店の形で足し、JSON として壊れていないか確かめる
