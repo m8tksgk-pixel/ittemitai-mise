@@ -114,6 +114,15 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
     <button class="chip" data-t="lunch">今日の昼</button>
     <button class="chip" data-t="dinner">今日の夜</button>
   </div>
+  <div class="chips" id="whoChips">
+    <button class="chip on" data-w="any">誰とでも</button>
+    <button class="chip" data-w="一人">一人</button>
+    <button class="chip" data-w="友達">友達</button>
+    <button class="chip" data-w="家族">家族・母</button>
+    <button class="chip" data-w="dog">みみちゃん</button>
+    <span class="sep"></span>
+    <button class="chip" data-r="walkin">予約なしで入れる</button>
+  </div>
   <div class="row"><label for="genre">ジャンル</label><select id="genre"><option value="">すべて</option></select></div>
 </div></header>
 
@@ -153,6 +162,7 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
     <label><input type="checkbox" name="byCar"> 車</label>
     <label><input type="checkbox" name="byTrain"> 電車</label>
     <label><input type="checkbox" name="needsReservation"> 予約いる</label>
+    <label><input type="checkbox" name="dogOk"> みみちゃんOK</label>
     <label><input type="checkbox" name="visited"> 行った</label>
     <label><input type="checkbox" name="liked"> また行きたい（美味しかった）</label>
   </div>
@@ -175,7 +185,7 @@ const TAB_LS = "ittemitai-mise-tab2";
 function inTab(s, t){ return t === "all" || !!s[t]; }
 let savedTab = "all";
 try { if (TABS[localStorage.getItem(TAB_LS)]) savedTab = localStorage.getItem(TAB_LS); } catch(e){}
-const st = { tab: savedTab, t: "any", v: "all", m: "all", q: "", g: "", hl: null };
+const st = { tab: savedTab, t: "any", w: "any", r: false, v: "all", m: "all", q: "", g: "", hl: null };
 
 function load(){ try { return JSON.parse(localStorage.getItem(LS)) || {edits:{}, added:[], deleted:[]}; } catch(e){ return {edits:{}, added:[], deleted:[]}; } }
 function save(){ localStorage.setItem(LS, JSON.stringify(local)); }
@@ -227,6 +237,9 @@ function filtered(){
     if (st.v === "yes" && !s.visited) return false;
     if (st.m !== "all" && !s[st.m]) return false;
     if (st.t === "now" && openNow(s) === false) return false;
+    if (st.w === "dog" && !s.dogOk) return false;
+    if (st.w !== "any" && st.w !== "dog" && !(s.goodFor || []).includes(st.w)) return false;
+    if (st.r && (s.reservation === "必須" || s.needsReservation)) return false;
     if (SLOTS[st.t] && openInSlot(s, st.t) === false) return false;
     if (st.g && s.genre !== st.g) return false;
     if (q) {
@@ -247,7 +260,12 @@ function card(s){
   const badges = [];
   if (s.visited) badges.push(`<span class="badge done">来店済み</span>`);
   if (s.liked) badges.push(`<span class="badge liked">また行きたい</span>`);
-  if (s.needsReservation) badges.push(`<span class="badge res">予約いる</span>`);
+  if (s.reservation === "必須" || s.needsReservation) badges.push(`<span class="badge res">予約必須</span>`);
+  else if (s.reservation === "推奨") badges.push(`<span class="badge res">予約推奨</span>`);
+  else if (s.reservation === "不可") badges.push(`<span class="badge">予約不可（並ぶことあり）</span>`);
+  if (s.award) badges.push(`<span class="badge liked">${esc(s.award)}</span>`);
+  if (s.dogOk) badges.push(`<span class="badge">みみちゃんOK</span>`);
+  (s.goodFor || []).forEach(g => badges.push(`<span class="badge">${esc(g === "家族" ? "家族・母" : g)}向き</span>`));
   if (s.carSuitability) badges.push(`<span class="badge car">${esc(s.carSuitability)}</span>`);
   if (s.want) badges.push(`<span class="badge">行きたい店</span>`);
   if (s.morning) badges.push(`<span class="badge">朝OK</span>`);
@@ -309,6 +327,8 @@ document.addEventListener("click", e => {
   if (!t) return;
   if (t.dataset.tab) { st.tab = t.dataset.tab; st.g = ""; st.hl = null; try { localStorage.setItem(TAB_LS, st.tab); } catch(e){} render(); window.scrollTo(0, 0); }
   else if (t.dataset.v) { st.v = t.dataset.v; document.querySelectorAll("[data-v]").forEach(b => b.classList.toggle("on", b === t)); render(); }
+  else if (t.dataset.w) { st.w = t.dataset.w; document.querySelectorAll("[data-w]").forEach(b => b.classList.toggle("on", b === t)); render(); }
+  else if (t.dataset.r) { st.r = !st.r; t.classList.toggle("on", st.r); render(); }
   else if (t.dataset.t) { st.t = t.dataset.t; document.querySelectorAll("[data-t]").forEach(b => b.classList.toggle("on", b === t)); render(); }
   else if (t.dataset.m) { st.m = t.dataset.m; document.querySelectorAll("[data-m]").forEach(b => b.classList.toggle("on", b === t)); render(); }
   else if (t.dataset.visit) {
@@ -331,7 +351,7 @@ document.getElementById("pick").addEventListener("click", () => {
 const dlg = document.getElementById("dlg"), form = document.getElementById("form");
 let editing = null;
 const TEXT = ["name","genre","area","address","phone","businessHours","closedDays","parkingInfo","accessNote","reservationNote","comment","tabelogUrl","websiteUrl","instagramUrl","photoUrl"];
-const BOOL = ["want","morning","byWalk","byCar","byTrain","needsReservation","visited","liked"];
+const BOOL = ["dogOk","want","morning","byWalk","byCar","byTrain","needsReservation","visited","liked"];
 function openDlg(id){
   editing = id;
   const s = id == null ? {} : shops().find(x => x.id === id);
