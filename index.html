@@ -53,6 +53,10 @@ main{padding:12px 12px 90px}
 .badge.car{background:#fde9cf;color:var(--warn)}
 .badge.res{background:#fbe0da;color:var(--accent)}
 .badge.done{background:#dcefe2;color:var(--good)}
+.badge.liked{background:#fde7ef;color:#b0306a}
+.status{display:inline-block;font-size:13px;font-weight:600;margin-top:6px;padding:2px 8px;border-radius:6px;background:var(--chip)}
+.status.open{background:#dcefe2;color:var(--good)}
+.status.closed{background:#eee;color:#888}
 .comment{margin-top:10px;background:#fff6e6;border-left:4px solid #e9b44c;padding:8px 10px;border-radius:6px;font-size:14px;white-space:pre-wrap}
 .links{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .links a{font-size:13px;text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:5px 10px;color:var(--ink);background:#fff}
@@ -103,6 +107,13 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
     <button class="chip" data-m="byCar">車</button>
     <button class="chip" data-m="byTrain">電車</button>
   </div>
+  <div class="chips" id="timeChips">
+    <button class="chip on" data-t="any">時間すべて</button>
+    <button class="chip" data-t="now">今開いてる</button>
+    <button class="chip" data-t="morning">今日の朝</button>
+    <button class="chip" data-t="lunch">今日の昼</button>
+    <button class="chip" data-t="dinner">今日の夜</button>
+  </div>
   <div class="row"><label for="genre">ジャンル</label><select id="genre"><option value="">すべて</option></select></div>
 </div></header>
 
@@ -143,6 +154,7 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
     <label><input type="checkbox" name="byTrain"> 電車</label>
     <label><input type="checkbox" name="needsReservation"> 予約いる</label>
     <label><input type="checkbox" name="visited"> 行った</label>
+    <label><input type="checkbox" name="liked"> また行きたい（美味しかった）</label>
   </div>
   <div class="dlg-actions">
     <button type="button" class="btn del" id="delBtn">削除</button>
@@ -163,7 +175,7 @@ const TAB_LS = "ittemitai-mise-tab2";
 function inTab(s, t){ return t === "all" || !!s[t]; }
 let savedTab = "all";
 try { if (TABS[localStorage.getItem(TAB_LS)]) savedTab = localStorage.getItem(TAB_LS); } catch(e){}
-const st = { tab: savedTab, v: "all", m: "all", q: "", g: "", hl: null };
+const st = { tab: savedTab, t: "any", v: "all", m: "all", q: "", g: "", hl: null };
 
 function load(){ try { return JSON.parse(localStorage.getItem(LS)) || {edits:{}, added:[], deleted:[]}; } catch(e){ return {edits:{}, added:[], deleted:[]}; } }
 function save(){ localStorage.setItem(LS, JSON.stringify(local)); }
@@ -178,6 +190,35 @@ function safeUrl(u){ return /^https?:\/\//i.test(u || "") ? u : ""; }
 function mapUrl(q){ return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q); }
 function toast(t){ const el = document.getElementById("toast"); el.textContent = t; el.classList.add("show"); setTimeout(() => el.classList.remove("show"), 1600); }
 
+// ---- 営業時間（hours: {月:["11:00-14:00",...],...}。24時以降は "25:00" のように書く）
+const DAYS = "日月火水木金土";
+const SLOTS = { morning: [360, 630], lunch: [660, 870], dinner: [1020, 1320] }; // 朝6:00-10:30 / 昼11:00-14:30 / 夜17:00-22:00
+function toMin(t){ const [h, m] = t.split(":").map(Number); return h * 60 + m; }
+function ranges(s, dayIdx){ const r = (s.hours && s.hours[DAYS[(dayIdx + 7) % 7]]) || []; return r.map(x => x.split("-").map(toMin)); }
+function nowInfo(){ const d = new Date(); return { day: d.getDay(), min: d.getHours() * 60 + d.getMinutes() }; }
+function openNow(s){
+  if (!s.hours) return null;
+  const { day, min } = nowInfo();
+  if (ranges(s, day).some(([a, b]) => a <= min && min < b)) return true;
+  return ranges(s, day - 1).some(([a, b]) => b > 1440 && min + 1440 < b);
+}
+function openInSlot(s, slot){
+  if (!s.hours) return null;
+  const [x, y] = SLOTS[slot];
+  return ranges(s, nowInfo().day).some(([a, b]) => a < y && b > x);
+}
+function fmt(m){ m %= 1440; return Math.floor(m / 60) + ":" + String(m % 60).padStart(2, "0"); }
+function statusOf(s){
+  if (!s.hours) return null;
+  const { day, min } = nowInfo();
+  const cur = [...ranges(s, day), ...ranges(s, day - 1).filter(([a, b]) => b > 1440).map(([a, b]) => [a - 1440, b - 1440])]
+    .find(([a, b]) => a <= min && min < b);
+  if (cur) return { cls: "open", text: "営業中（" + fmt(cur[1]) + "まで）" };
+  const next = ranges(s, day).find(([a]) => a > min);
+  if (next) return { cls: "", text: "今日は " + fmt(next[0]) + " から" };
+  return { cls: "closed", text: ranges(s, day).length ? "今日はもう終わり" : "今日は休み" };
+}
+
 function filtered(){
   const q = st.q.trim().toLowerCase();
   return shops().filter(s => {
@@ -185,6 +226,8 @@ function filtered(){
     if (st.v === "no" && s.visited) return false;
     if (st.v === "yes" && !s.visited) return false;
     if (st.m !== "all" && !s[st.m]) return false;
+    if (st.t === "now" && openNow(s) === false) return false;
+    if (SLOTS[st.t] && openInSlot(s, st.t) === false) return false;
     if (st.g && s.genre !== st.g) return false;
     if (q) {
       const hay = [s.name, s.genre, s.area, s.address, s.comment, s.accessNote].join(" ").toLowerCase();
@@ -203,6 +246,7 @@ function card(s){
   if (safeUrl(s.xUrl)) links.push(`<a href="${esc(s.xUrl)}" target="_blank" rel="noopener">X</a>`);
   const badges = [];
   if (s.visited) badges.push(`<span class="badge done">来店済み</span>`);
+  if (s.liked) badges.push(`<span class="badge liked">また行きたい</span>`);
   if (s.needsReservation) badges.push(`<span class="badge res">予約いる</span>`);
   if (s.carSuitability) badges.push(`<span class="badge car">${esc(s.carSuitability)}</span>`);
   if (s.want) badges.push(`<span class="badge">行きたい店</span>`);
@@ -221,6 +265,7 @@ function card(s){
       </div>
       ${s.address ? `<div class="addr">${esc(s.address)}</div>` : ""}
       ${s.accessNote ? `<div class="addr">${esc(s.accessNote)}</div>` : ""}
+      ${(() => { const x = statusOf(s); return x ? `<div class="status ${x.cls}">${esc(x.text)}</div>` : ""; })()}
       ${s.businessHours ? `<div class="kv"><b>営業時間</b>${esc(s.businessHours)}</div>` : ""}
       ${s.closedDays ? `<div class="kv"><b>定休日</b>${esc(s.closedDays)}</div>` : ""}
       ${s.parkingInfo ? `<div class="kv"><b>駐車場</b>${esc(s.parkingInfo)}</div>` : ""}
@@ -264,6 +309,7 @@ document.addEventListener("click", e => {
   if (!t) return;
   if (t.dataset.tab) { st.tab = t.dataset.tab; st.g = ""; st.hl = null; try { localStorage.setItem(TAB_LS, st.tab); } catch(e){} render(); window.scrollTo(0, 0); }
   else if (t.dataset.v) { st.v = t.dataset.v; document.querySelectorAll("[data-v]").forEach(b => b.classList.toggle("on", b === t)); render(); }
+  else if (t.dataset.t) { st.t = t.dataset.t; document.querySelectorAll("[data-t]").forEach(b => b.classList.toggle("on", b === t)); render(); }
   else if (t.dataset.m) { st.m = t.dataset.m; document.querySelectorAll("[data-m]").forEach(b => b.classList.toggle("on", b === t)); render(); }
   else if (t.dataset.visit) {
     const id = +t.dataset.visit; const s = shops().find(x => x.id === id);
@@ -285,7 +331,7 @@ document.getElementById("pick").addEventListener("click", () => {
 const dlg = document.getElementById("dlg"), form = document.getElementById("form");
 let editing = null;
 const TEXT = ["name","genre","area","address","phone","businessHours","closedDays","parkingInfo","accessNote","reservationNote","comment","tabelogUrl","websiteUrl","instagramUrl","photoUrl"];
-const BOOL = ["want","morning","byWalk","byCar","byTrain","needsReservation","visited"];
+const BOOL = ["want","morning","byWalk","byCar","byTrain","needsReservation","visited","liked"];
 function openDlg(id){
   editing = id;
   const s = id == null ? {} : shops().find(x => x.id === id);
