@@ -11,10 +11,8 @@
 </head><body>
 <img src="../icon-512.png" alt="">
 <div><b>受け箱 をホーム画面に入れる画面です</b></div>
-<div>右上の︙（メニューが無いときは、下の緑のボタンでChromeを開いてから） →「ホーム画面に追加」→「インストール」。<br>出てくるアイコンがこの絵（ポスト）なら成功です。</div>
+<div>右上の︙ →「ホーム画面に追加」→「インストール」。<br>出てくるアイコンがこの絵（ポスト）なら成功です。</div>
 <div style="font-size:13px;color:#aaa">この画面は自動で移動しません。入れたアイコンを押すと本体が開きます。</div>
-<a id="chrome" href="intent://m8tksgk-pixel.github.io/ittemitai-mise/go/ukebako/add/#Intent;scheme=https;package=com.android.chrome;end" style="display:none;background:#7fd6b8;color:#10201c;padding:14px 22px;border-radius:14px;font-weight:bold;text-decoration:none;font-size:18px">Chromeで開き直す</a>
-<script>if(matchMedia("(display-mode: standalone)").matches||!/Chrome\//.test(navigator.userAgent)||/EdgA|SamsungBrowser|Brave/.test(navigator.userAgent)){document.getElementById("chrome").style.display="inline-block"}</script>
 <button id="cp" style="background:#e9b44c;color:#1f1a10;border:0;padding:14px 22px;border-radius:14px;font-weight:bold;font-size:18px">① このページのアドレスをコピー</button>
 <div style="font-size:15px">② Chromeを開いて、上のアドレス欄に貼り付けて開く<br>③ Chromeの︙ →「ホーム画面に追加」→「インストール」</div>
 <script>document.getElementById("cp").onclick=async function(){var u="https://m8tksgk-pixel.github.io/ittemitai-mise/go/ukebako/add/";try{await navigator.clipboard.writeText(u);this.textContent="コピーしました。Chromeに貼り付けてください"}catch(e){var t=document.createElement("textarea");t.value=u;document.body.appendChild(t);t.select();try{document.execCommand("copy");this.textContent="コピーしました。Chromeに貼り付けてください"}catch(_){this.textContent=u}t.remove()}}</script>
