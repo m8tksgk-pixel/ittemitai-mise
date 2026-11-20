@@ -11,8 +11,8 @@
 <style>body{margin:0;background:#1f2a2a;color:#eee;font-family:sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px}img{width:96px;height:96px;border-radius:20px}a{color:#7fd6b8;font-size:18px}</style>
 </head><body>
 <img src="icon-192.png" alt="">
-<div>受け箱 を開いています…</div>
+<div id="msg">受け箱 を開いています…</div>
 <a href="https://claude.ai/artifact/CLYuXnme69j2euGcKoN4Bs">開かないときはここを押す</a>
-<div id="add" style="display:none;max-width:300px;line-height:1.6">このまま ブラウザのメニュー（︙）→「ホーム画面に追加」を押してください。追加したアイコンを押すと自動で開きます。</div>
-<script>if(location.search.indexOf("add")>-1){document.getElementById("add").style.display="block"}else setTimeout(function(){location.replace("https://claude.ai/artifact/CLYuXnme69j2euGcKoN4Bs")},300)</script>
+<div id="add" style="display:none;max-width:300px;line-height:1.6">【Chromeで開いていること】を確かめてから、右上のメニュー（︙）→「ホーム画面に追加」→「インストール」を押してください。上の絵と同じアイコンが出れば成功です。</div>
+<script>if(location.search.indexOf("add")>-1){document.getElementById("add").style.display="block";document.getElementById("msg").textContent="ホーム画面に追加する画面です"}else setTimeout(function(){location.replace("https://claude.ai/artifact/CLYuXnme69j2euGcKoN4Bs")},300)</script>
 </body></html>
